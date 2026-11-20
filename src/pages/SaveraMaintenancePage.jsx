@@ -1,0 +1,249 @@
+import React, { useState } from 'react';
+import {
+  Wrench,
+  Search,
+  Filter,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  Calendar,
+  Plane,
+  ShieldCheck,
+  Plus,
+  X
+} from 'lucide-react';
+import { useSavera } from '../context/SaveraContext';
+
+const SaveraMaintenancePage = () => {
+  const { maintenance, fleet, showToast } = useSavera();
+  const [filter, setFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+
+  const filteredTasks = maintenance.filter(m => {
+    if (search) {
+      const q = search.toLowerCase();
+      const match =
+        m.aircraft.toLowerCase().includes(q) ||
+        m.task.toLowerCase().includes(q) ||
+        m.technician.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    if (filter === 'ALL') return true;
+    if (filter === 'IN_PROGRESS') return m.status === 'In Progress';
+    if (filter === 'SCHEDULED') return m.status === 'Scheduled';
+    if (filter === 'COMPLETED') return m.status === 'Completed';
+    return true;
+  });
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8C77E]/15">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#E8C77E]/10 border border-[#E8C77E]/25 flex items-center justify-center text-[#E8C77E]">
+              <Wrench className="w-4 h-4" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-white m-0">
+              Aircraft Maintenance & Technical Logs
+            </h1>
+          </div>
+          <p className="text-xs text-[#AAB2C2] mt-1 m-0">
+            Hangar inspection logs, A/B/C scheduled checks, avionics calibrations, engine health diagnostics, and DGCA airworthiness records.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsNewTaskOpen(true)}
+            className="savera-btn-gold py-2 px-4 text-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Maintenance Task</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Hangar Status KPI Banner */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl bg-[#10182B] border border-[#E8C77E]/20">
+          <div className="text-xs text-[#AAB2C2] uppercase font-bold">Airframes in Hangar</div>
+          <div className="text-2xl font-serif font-black text-[#E8B75F] mt-1">3 Frames</div>
+          <div className="text-[10px] text-[#AAB2C2] font-mono">DEL Bay 4 & 5</div>
+        </div>
+        <div className="p-4 rounded-xl bg-[#10182B] border border-[#E8C77E]/20">
+          <div className="text-xs text-[#AAB2C2] uppercase font-bold">A-Check Cycle Cleared</div>
+          <div className="text-2xl font-serif font-black text-[#91C98A] mt-1">29 Cleared</div>
+          <div className="text-[10px] text-[#91C98A] font-mono">100% Airworthy</div>
+        </div>
+        <div className="p-4 rounded-xl bg-[#10182B] border border-[#E8C77E]/20">
+          <div className="text-xs text-[#AAB2C2] uppercase font-bold">Pending Calibrations</div>
+          <div className="text-2xl font-serif font-black text-[#72C4FF] mt-1">2 Avionics</div>
+          <div className="text-[10px] text-[#AAB2C2] font-mono">Routine weather radar test</div>
+        </div>
+        <div className="p-4 rounded-xl bg-[#10182B] border border-[#E8C77E]/20">
+          <div className="text-xs text-[#AAB2C2] uppercase font-bold">Regulatory Audits</div>
+          <div className="text-2xl font-serif font-black text-[#E8C77E] mt-1">Zero Findings</div>
+          <div className="text-[10px] text-[#91C98A] font-mono">DGCA Compliant</div>
+        </div>
+      </div>
+
+      {/* Maintenance Tasks Table */}
+      <div className="savera-card overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-[#E8C77E]/15 bg-[#10182B]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            {['ALL', 'IN_PROGRESS', 'SCHEDULED', 'COMPLETED'].map(st => (
+              <button
+                key={st}
+                onClick={() => setFilter(st)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                  filter === st
+                    ? 'bg-[#E8C77E] text-[#080D1B]'
+                    : 'text-[#AAB2C2] hover:text-white bg-[#080D1B] border border-[#E8C77E]/15'
+                }`}
+              >
+                {st.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative min-w-[220px]">
+            <Search className="w-4 h-4 text-[#AAB2C2] absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search airframe tail or task..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-[#080D1B] border border-[#E8C77E]/20 rounded-xl text-xs text-white placeholder-[#AAB2C2]/60 focus:outline-none focus:border-[#E8C77E]"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#E8C77E]/15 bg-[#0C1424] text-[11px] font-bold uppercase tracking-wider text-[#AAB2C2]">
+                <th className="py-3.5 px-4 sm:px-6">Aircraft Registration</th>
+                <th className="py-3.5 px-4 sm:px-6">Maintenance Task</th>
+                <th className="py-3.5 px-4 sm:px-6">Type & Check Code</th>
+                <th className="py-3.5 px-4 sm:px-6">Assigned Engineer</th>
+                <th className="py-3.5 px-4 sm:px-6">Estimated Return to Service</th>
+                <th className="py-3.5 px-4 sm:px-6">Status</th>
+                <th className="py-3.5 px-4 sm:px-6 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E8C77E]/10 text-xs">
+              {filteredTasks.map((t) => (
+                <tr
+                  key={t.id}
+                  onClick={() => setSelectedTask(t)}
+                  className="hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                >
+                  <td className="py-4 px-4 sm:px-6 font-mono font-bold text-white">
+                    {t.aircraft}
+                  </td>
+                  <td className="py-4 px-4 sm:px-6 text-white font-medium">
+                    {t.task}
+                  </td>
+                  <td className="py-4 px-4 sm:px-6">
+                    <span className="px-2 py-0.5 rounded bg-[#E8C77E]/15 text-[#E8C77E] font-mono text-[10px] font-bold">
+                      {t.checkType || 'A-Check'}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 sm:px-6 text-[#AAB2C2]">
+                    {t.technician}
+                  </td>
+                  <td className="py-4 px-4 sm:px-6 font-mono text-white">
+                    {t.scheduledDate || 'Tomorrow 08:00 IST'}
+                  </td>
+                  <td className="py-4 px-4 sm:px-6">
+                    {t.status === 'Completed' ? (
+                      <span className="badge-status badge-ontime">Completed</span>
+                    ) : t.status === 'In Progress' ? (
+                      <span className="badge-status badge-boarding">In Progress</span>
+                    ) : (
+                      <span className="badge-status badge-scheduled">Scheduled</span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4 sm:px-6 text-right">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        showToast(`Airworthiness sign-off reviewed for ${t.aircraft}`, 'gold');
+                      }}
+                      className="savera-btn-secondary py-1 px-2.5 text-xs rounded-lg cursor-pointer"
+                    >
+                      Sign Off
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Task Creation Modal */}
+      {isNewTaskOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#111A2D] border border-[#E8C77E]/40 rounded-2xl max-w-md w-full shadow-2xl p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E8C77E]/20">
+              <h3 className="text-base font-bold text-white m-0">Schedule Hangar Maintenance</h3>
+              <button onClick={() => setIsNewTaskOpen(false)} className="text-[#AAB2C2] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="py-4 space-y-3 text-xs">
+              <div>
+                <label className="text-[#AAB2C2] block mb-1">Aircraft Tail Registration</label>
+                <select className="w-full bg-[#080D1B] border border-[#E8C77E]/20 p-2 rounded-xl text-white">
+                  <option>VT-SAV (Airbus A350-900)</option>
+                  <option>VT-SVR (Airbus A321neo)</option>
+                  <option>VT-LUX (Boeing 787-9)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[#AAB2C2] block mb-1">Check Classification</label>
+                <select className="w-full bg-[#080D1B] border border-[#E8C77E]/20 p-2 rounded-xl text-white">
+                  <option>A-Check (Standard 500-Hour Cycle)</option>
+                  <option>B-Check (Engine Borescope Inspection)</option>
+                  <option>Avionics & TCAS Calibration</option>
+                  <option>Cabin Interior & In-Flight Entertainment Refresh</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[#AAB2C2] block mb-1">Hangar Facility</label>
+                <input
+                  type="text"
+                  defaultValue="DEL Terminal 3 Hangar Bay 4"
+                  className="w-full bg-[#080D1B] border border-[#E8C77E]/20 p-2 rounded-xl text-white"
+                />
+              </div>
+            </div>
+            <div className="pt-3 border-t border-[#E8C77E]/20 flex justify-end gap-2">
+              <button
+                onClick={() => setIsNewTaskOpen(false)}
+                className="savera-btn-secondary py-1.5 px-3 text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  showToast('New maintenance cycle booked in OCC logbook', 'success');
+                  setIsNewTaskOpen(false);
+                }}
+                className="savera-btn-gold py-1.5 px-3 text-xs"
+              >
+                Log Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SaveraMaintenancePage;
