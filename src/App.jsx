@@ -6,6 +6,7 @@ import SaveraNavbar from './components/SaveraNavbar';
 import SaveraFlightDetailModal from './components/SaveraFlightDetailModal';
 import FlightRippleModal from './components/FlightRippleModal';
 import SaveraNewFlightModal from './components/SaveraNewFlightModal';
+import SaveraAuthModal from './components/SaveraAuthModal';
 
 // SAVÉRA Operations Pages
 import SaveraDashboard from './pages/SaveraDashboard';
@@ -103,6 +104,7 @@ const SaveraAppLayout = () => {
       <SaveraFlightDetailModal />
       <FlightRippleModal />
       <SaveraNewFlightModal />
+      <SaveraAuthModal />
 
       {/* Global Toast Notification */}
       {toastMessage && (

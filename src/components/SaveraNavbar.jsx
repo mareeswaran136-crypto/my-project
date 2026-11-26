@@ -11,7 +11,10 @@ import {
   ChevronDown,
   X,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Shield,
+  Radio
 } from 'lucide-react';
 import { useSavera } from '../context/SaveraContext';
 import { useNavigate } from 'react-router-dom';
@@ -25,7 +28,12 @@ const SaveraNavbar = ({ onOpenMobileSidebar, pageTitle = 'Operations Dashboard' 
     brand,
     globalSearch,
     setGlobalSearch,
-    setIsFlightRippleModalOpen
+    setIsFlightRippleModalOpen,
+    backendStatus,
+    refreshData,
+    currentUser,
+    setIsAuthModalOpen,
+    isLoading
   } = useSavera();
 
   const navigate = useNavigate();
@@ -106,6 +114,31 @@ const SaveraNavbar = ({ onOpenMobileSidebar, pageTitle = 'Operations Dashboard' 
           <Sparkles className="w-3.5 h-3.5 text-[#E8C77E] animate-pulse" />
           <span className="tracking-wide">FlightRipple</span>
         </button>
+
+        {/* Backend API Status Pill & Manual Sync */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold transition-all border cursor-pointer ${
+              backendStatus === 'connected'
+                ? 'bg-[#82D197]/15 text-[#82D197] border-[#82D197]/30 hover:bg-[#82D197]/25'
+                : 'bg-[#E87474]/15 text-[#E87474] border-[#E87474]/30 hover:bg-[#E87474]/25'
+            }`}
+            title="Click to manage OCC backend authentication clearance"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${backendStatus === 'connected' ? 'bg-[#82D197] animate-pulse' : 'bg-[#E87474]'}`} />
+            {backendStatus === 'connected' ? 'LIVE API' : 'OFFLINE'}
+          </button>
+
+          <button
+            onClick={() => refreshData()}
+            disabled={isLoading}
+            className="p-2 text-[#9EABBE] hover:text-[#E8C77E] hover:bg-white/5 rounded-xl border border-transparent hover:border-[#E8C77E]/20 transition-colors cursor-pointer"
+            title="Sync live operational data from backend"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#E8C77E]' : ''}`} />
+          </button>
+        </div>
 
         {/* Operational Messages / Dispatch Comms */}
         <button
@@ -211,19 +244,19 @@ const SaveraNavbar = ({ onOpenMobileSidebar, pageTitle = 'Operations Dashboard' 
         <div className="relative">
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-2.5 pl-1.5 pr-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-[#E8C77E]/25 hover:border-[#E8C77E]/60 transition-all shadow-sm"
+            className="flex items-center gap-2.5 pl-1.5 pr-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-[#E8C77E]/25 hover:border-[#E8C77E]/60 transition-all shadow-sm cursor-pointer"
           >
             <img
-              src={brand.adminUser.avatar}
-              alt={brand.adminUser.name}
+              src={currentUser?.avatar || brand.adminUser.avatar}
+              alt={currentUser?.name || brand.adminUser.name}
               className="w-7 h-7 rounded-lg object-cover border border-[#E8C77E]/50 shadow"
             />
             <div className="hidden md:block text-left">
               <p className="text-xs font-bold text-[#F8F6F0] leading-tight m-0">
-                {brand.adminUser.name}
+                {currentUser?.name || brand.adminUser.name}
               </p>
               <p className="text-[9px] text-[#E8C77E] leading-tight m-0 font-semibold tracking-wide">
-                Chief Controller
+                {currentUser?.title || 'Chief Controller'}
               </p>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-[#9EABBE]" />
@@ -233,19 +266,19 @@ const SaveraNavbar = ({ onOpenMobileSidebar, pageTitle = 'Operations Dashboard' 
             <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#10192F] border border-[#E8C77E]/35 shadow-2xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center gap-3 pb-3 border-b border-[#E8C77E]/20">
                 <img
-                  src={brand.adminUser.avatar}
-                  alt={brand.adminUser.name}
+                  src={currentUser?.avatar || brand.adminUser.avatar}
+                  alt={currentUser?.name || brand.adminUser.name}
                   className="w-10 h-10 rounded-xl object-cover border border-[#E8C77E] shadow-md"
                 />
                 <div>
                   <p className="text-xs font-bold text-[#F8F6F0] m-0">
-                    {brand.adminUser.name}
+                    {currentUser?.name || brand.adminUser.name}
                   </p>
                   <p className="text-[10px] text-[#E8C77E] font-semibold m-0">
-                    {brand.adminUser.badgeId} • {brand.adminUser.role}
+                    {currentUser?.badgeId || brand.adminUser.badgeId} • {currentUser?.role || brand.adminUser.role}
                   </p>
                   <p className="text-[10px] text-[#9EABBE] m-0">
-                    {brand.adminUser.email}
+                    {currentUser?.email || brand.adminUser.email}
                   </p>
                 </div>
               </div>
@@ -255,26 +288,38 @@ const SaveraNavbar = ({ onOpenMobileSidebar, pageTitle = 'Operations Dashboard' 
                   Security Clearance
                 </div>
                 <div className="text-[11px] text-[#82D197] font-mono px-1 font-semibold">
-                  {brand.adminUser.clearance}
+                  {currentUser?.clearance || brand.adminUser.clearance}
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[#E8C77E]/20 flex items-center justify-between">
+              <div className="pt-2 border-t border-[#E8C77E]/20 flex flex-col gap-2">
                 <button
                   onClick={() => {
                     setIsProfileOpen(false);
-                    navigate('/settings');
+                    setIsAuthModalOpen(true);
                   }}
-                  className="text-xs text-[#E8C77E] hover:underline font-bold"
+                  className="text-xs text-left py-1 text-[#E8C77E] hover:underline font-bold cursor-pointer flex items-center gap-1.5"
                 >
-                  Edit Profile
+                  <Shield className="w-3.5 h-3.5" />
+                  Clearance & Token Management
                 </button>
-                <button
-                  onClick={() => setIsProfileOpen(false)}
-                  className="text-xs text-[#9EABBE] hover:text-[#F8F6F0]"
-                >
-                  Close
-                </button>
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      navigate('/settings');
+                    }}
+                    className="text-xs text-[#AAB2C2] hover:text-white font-medium"
+                  >
+                    Settings
+                  </button>
+                  <button
+                    onClick={() => setIsProfileOpen(false)}
+                    className="text-xs text-[#9EABBE] hover:text-[#F8F6F0]"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           )}

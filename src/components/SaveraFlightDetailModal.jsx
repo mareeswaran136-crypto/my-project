@@ -184,7 +184,10 @@ const SaveraFlightDetailModal = () => {
               {['En Route', 'On Time', 'Delayed', 'Boarding', 'Landed'].map((st) => (
                 <button
                   key={st}
-                  onClick={() => updateFlightStatus(f.id, st)}
+                  onClick={() => {
+                    updateFlightStatus(f.id, st);
+                    setSelectedFlight((prev) => (prev ? { ...prev, status: st } : null));
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                     f.status === st
                       ? 'bg-[#E8C77E] text-[#080D1B] font-bold shadow'

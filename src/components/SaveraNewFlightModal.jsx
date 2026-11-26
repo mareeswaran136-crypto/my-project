@@ -36,9 +36,9 @@ const SaveraNewFlightModal = () => {
 
   if (!isNewFlightModalOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    addFlight(formData);
+    await addFlight(formData);
     setIsNewFlightModalOpen(false);
   };
 

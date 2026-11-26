@@ -15,7 +15,7 @@ import {
 import { useSavera } from '../context/SaveraContext';
 
 const SaveraMaintenancePage = () => {
-  const { maintenance, fleet, showToast } = useSavera();
+  const { maintenance, fleet, showToast, signOffMaintenance } = useSavera();
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
@@ -171,7 +171,7 @@ const SaveraMaintenancePage = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        showToast(`Airworthiness sign-off reviewed for ${t.aircraft}`, 'gold');
+                        signOffMaintenance(t.id, `Airworthiness sign-off completed for ${t.aircraft}`);
                       }}
                       className="savera-btn-secondary py-1 px-2.5 text-xs rounded-lg cursor-pointer"
                     >

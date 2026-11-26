@@ -9,19 +9,30 @@ import {
   Lock,
   Sparkles,
   Plane,
-  Save
+  Save,
+  Server,
+  RefreshCw,
+  Key
 } from 'lucide-react';
 import { useSavera } from '../context/SaveraContext';
 
 const SaveraSettingsPage = () => {
-  const { brand, showToast } = useSavera();
+  const {
+    brand,
+    showToast,
+    backendStatus,
+    currentUser,
+    setIsAuthModalOpen,
+    refreshData,
+    isLoading
+  } = useSavera();
 
   const [profile, setProfile] = useState({
-    name: brand.adminUser.name,
-    title: brand.adminUser.title,
-    email: brand.adminUser.email,
+    name: currentUser?.name || brand.adminUser.name,
+    title: currentUser?.title || brand.adminUser.title,
+    email: currentUser?.email || brand.adminUser.email,
     shift: brand.adminUser.shift,
-    badgeId: brand.adminUser.badgeId
+    badgeId: currentUser?.badgeId || brand.adminUser.badgeId
   });
 
   const [preferences, setPreferences] = useState({
@@ -210,6 +221,66 @@ const SaveraSettingsPage = () => {
                   <option value="30">30 Minutes (Relaxed)</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Backend API Integration Settings Card */}
+          <div className="savera-card p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E8C77E]/15">
+              <div className="flex items-center gap-2">
+                <Server className="w-4 h-4 text-[#E8C77E]" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white m-0">
+                  Backend API & Environment Integration
+                </h3>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                backendStatus === 'connected'
+                  ? 'bg-[#82D197]/15 text-[#82D197] border-[#82D197]/30'
+                  : 'bg-[#E87474]/15 text-[#E87474] border-[#E87474]/30'
+              }`}>
+                {backendStatus === 'connected' ? '● Connected' : '○ Offline Cache'}
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#080D1B] border border-[#E8C77E]/15 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[#AAB2C2]">API Endpoint:</span>
+                <span className="font-mono text-white text-[11px]">
+                  {import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#AAB2C2]">Authenticated Staff:</span>
+                <span className="font-mono text-[#E8C77E] text-[11px]">
+                  {currentUser?.name || 'Capt. Rajesh Varma'} ({currentUser?.role || 'Admin'})
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#AAB2C2]">Security Clearances:</span>
+                <span className="text-[#82D197] font-mono text-[11px]">
+                  {currentUser?.clearance || 'Level 5 - Unrestricted Airspace'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="savera-btn-secondary py-2 px-3 text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Key className="w-3.5 h-3.5 text-[#E8C77E]" />
+                Manage Clearances & JWT
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => refreshData()}
+                className="savera-btn-gold py-2 px-3 text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                Sync With Backend
+              </button>
             </div>
           </div>
         </div>
