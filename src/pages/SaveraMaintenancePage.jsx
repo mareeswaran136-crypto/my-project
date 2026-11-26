@@ -13,13 +13,69 @@ import {
   X
 } from 'lucide-react';
 import { useSavera } from '../context/SaveraContext';
+import { api } from '../services/api';
 
 const SaveraMaintenancePage = () => {
-  const { maintenance, fleet, showToast, signOffMaintenance } = useSavera();
+  const { maintenance, setMaintenance, fleet, showToast, signOffMaintenance } = useSavera();
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [taskForm, setTaskForm] = useState({
+    aircraftRegistration: fleet[0]?.tailNumber || 'VT-SAV',
+    taskTitle: 'A-Check Periodic Airframe & Avionics Inspection',
+    category: 'A-Check',
+    hangarBay: 'DEL Terminal 3 Hangar Bay 4',
+    status: 'IN PROGRESS'
+  });
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const code = `WO-${Math.floor(1000 + Math.random() * 9000)}`;
+    const selAircraft = fleet.find(a => a.tailNumber === taskForm.aircraftRegistration || a.registration === taskForm.aircraftRegistration) || fleet[0];
+
+    const payload = {
+      aircraftId: selAircraft?.id || taskForm.aircraftRegistration,
+      taskTitle: taskForm.taskTitle,
+      checkCode: code,
+      category: taskForm.category,
+      hangarBay: taskForm.hangarBay,
+      status: taskForm.status,
+      estimatedReturnToService: new Date(Date.now() + 6 * 3600 * 1000)
+    };
+
+    try {
+      const created = await api.maintenance.create(payload);
+      if (created) {
+        setMaintenance(prev => [created, ...prev]);
+      }
+      showToast(`Work Order ${code} logged in MongoDB Hangar Registry!`, 'gold');
+      setIsNewTaskOpen(false);
+    } catch (err) {
+      console.warn('Backend maintenance log failed, added locally:', err.message);
+      const localTask = {
+        id: code,
+        _id: code,
+        aircraft: `${selAircraft?.tailNumber || 'VT-SAV'} (${selAircraft?.model || 'Airbus A350-900'})`,
+        task: taskForm.taskTitle,
+        type: `${taskForm.category} (${code})`,
+        technician: 'Eng. Suresh Nair (Lead)',
+        hangar: taskForm.hangarBay,
+        status: taskForm.status === 'IN PROGRESS' ? 'In Progress' : 'Scheduled',
+        started: 'Today 08:00 IST',
+        estCompletion: 'Today 16:30 IST',
+        progress: taskForm.status === 'IN PROGRESS' ? 35 : 0
+      };
+      setMaintenance(prev => [localTask, ...prev]);
+      showToast(`Work order ${code} logged locally (${err.message})`, 'gold');
+      setIsNewTaskOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filteredTasks = maintenance.filter(m => {
     if (search) {
@@ -191,54 +247,103 @@ const SaveraMaintenancePage = () => {
           <div className="bg-[#111A2D] border border-[#E8C77E]/40 rounded-2xl max-w-md w-full shadow-2xl p-6">
             <div className="flex items-center justify-between pb-3 border-b border-[#E8C77E]/20">
               <h3 className="text-base font-bold text-white m-0">Schedule Hangar Maintenance</h3>
-              <button onClick={() => setIsNewTaskOpen(false)} className="text-[#AAB2C2] hover:text-white">
+              <button onClick={() => setIsNewTaskOpen(false)} className="text-[#AAB2C2] hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="py-4 space-y-3 text-xs">
+            <form onSubmit={handleCreateTask} className="py-4 space-y-3.5 text-xs">
               <div>
-                <label className="text-[#AAB2C2] block mb-1">Aircraft Tail Registration</label>
-                <select className="w-full bg-[#080D1B] border border-[#E8C77E]/20 p-2 rounded-xl text-white">
-                  <option>VT-SAV (Airbus A350-900)</option>
-                  <option>VT-SVR (Airbus A321neo)</option>
-                  <option>VT-LUX (Boeing 787-9)</option>
+                <label className="text-[#AAB2C2] block mb-1 font-bold uppercase text-[10px]">
+                  Aircraft Tail Registration
+                </label>
+                <select
+                  value={taskForm.aircraftRegistration}
+                  onChange={(e) => setTaskForm({ ...taskForm, aircraftRegistration: e.target.value })}
+                  className="w-full bg-[#080D1B] border border-[#E8C77E]/25 p-2 rounded-xl text-white font-mono focus:outline-none focus:border-[#E8C77E]"
+                >
+                  {fleet.map((a) => (
+                    <option key={a.tailNumber || a.registration} value={a.tailNumber || a.registration}>
+                      {a.tailNumber || a.registration} ({a.model})
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div>
-                <label className="text-[#AAB2C2] block mb-1">Check Classification</label>
-                <select className="w-full bg-[#080D1B] border border-[#E8C77E]/20 p-2 rounded-xl text-white">
-                  <option>A-Check (Standard 500-Hour Cycle)</option>
-                  <option>B-Check (Engine Borescope Inspection)</option>
-                  <option>Avionics & TCAS Calibration</option>
-                  <option>Cabin Interior & In-Flight Entertainment Refresh</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[#AAB2C2] block mb-1">Hangar Facility</label>
+                <label className="text-[#AAB2C2] block mb-1 font-bold uppercase text-[10px]">
+                  Task Title / Description
+                </label>
                 <input
                   type="text"
-                  defaultValue="DEL Terminal 3 Hangar Bay 4"
-                  className="w-full bg-[#080D1B] border border-[#E8C77E]/20 p-2 rounded-xl text-white"
+                  required
+                  value={taskForm.taskTitle}
+                  onChange={(e) => setTaskForm({ ...taskForm, taskTitle: e.target.value })}
+                  className="w-full bg-[#080D1B] border border-[#E8C77E]/25 p-2 rounded-xl text-white focus:outline-none focus:border-[#E8C77E]"
                 />
               </div>
-            </div>
-            <div className="pt-3 border-t border-[#E8C77E]/20 flex justify-end gap-2">
-              <button
-                onClick={() => setIsNewTaskOpen(false)}
-                className="savera-btn-secondary py-1.5 px-3 text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  showToast('New maintenance cycle booked in OCC logbook', 'success');
-                  setIsNewTaskOpen(false);
-                }}
-                className="savera-btn-gold py-1.5 px-3 text-xs"
-              >
-                Log Task
-              </button>
-            </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[#AAB2C2] block mb-1 font-bold uppercase text-[10px]">
+                    Check Category
+                  </label>
+                  <select
+                    value={taskForm.category}
+                    onChange={(e) => setTaskForm({ ...taskForm, category: e.target.value })}
+                    className="w-full bg-[#080D1B] border border-[#E8C77E]/25 p-2 rounded-xl text-white focus:outline-none focus:border-[#E8C77E]"
+                  >
+                    <option value="A-Check">A-Check (Standard 500-FH)</option>
+                    <option value="Avionics Calibration">Avionics Calibration</option>
+                    <option value="Engine Diagnostics">Engine Diagnostics</option>
+                    <option value="Hangar Inspection">Hangar Inspection</option>
+                    <option value="Audit">DGCA Audit Review</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[#AAB2C2] block mb-1 font-bold uppercase text-[10px]">
+                    Work Order Status
+                  </label>
+                  <select
+                    value={taskForm.status}
+                    onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}
+                    className="w-full bg-[#080D1B] border border-[#E8C77E]/25 p-2 rounded-xl text-white focus:outline-none focus:border-[#E8C77E]"
+                  >
+                    <option value="IN PROGRESS">In Progress</option>
+                    <option value="SCHEDULED">Scheduled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[#AAB2C2] block mb-1 font-bold uppercase text-[10px]">
+                  Hangar Facility Bay
+                </label>
+                <input
+                  type="text"
+                  value={taskForm.hangarBay}
+                  onChange={(e) => setTaskForm({ ...taskForm, hangarBay: e.target.value })}
+                  className="w-full bg-[#080D1B] border border-[#E8C77E]/25 p-2 rounded-xl text-white focus:outline-none focus:border-[#E8C77E]"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-[#E8C77E]/20 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewTaskOpen(false)}
+                  className="savera-btn-secondary py-1.5 px-3 text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="savera-btn-gold py-1.5 px-4 text-xs cursor-pointer"
+                >
+                  {isSubmitting ? 'Logging...' : 'Log Work Order'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

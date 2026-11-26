@@ -12,16 +12,22 @@ import {
   ChevronRight,
   Plane,
   X,
-  AlertCircle
+  AlertCircle,
+  UserPlus
 } from 'lucide-react';
 import { useSavera } from '../context/SaveraContext';
+import SaveraNewCrewModal from '../components/SaveraNewCrewModal';
 
 const SaveraCrewPage = () => {
-  const { crew, flights, showToast } = useSavera();
+  const { crew, flights, showToast, updateCrewDuty } = useSavera();
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [dutyFilter, setDutyFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [selectedCrewMember, setSelectedCrewMember] = useState(null);
+  const [isNewCrewModalOpen, setIsNewCrewModalOpen] = useState(false);
+
+  const activeOnDutyCount = crew.filter(c => c.dutyStatus === 'On Duty').length;
+  const standbyCount = crew.filter(c => c.dutyStatus === 'Standby').length;
 
   const filteredCrew = crew.filter(c => {
     if (search) {
@@ -59,16 +65,23 @@ const SaveraCrewPage = () => {
           </p>
         </div>
 
-        {/* Quick Duty Summary Stats */}
+        {/* Quick Duty Summary Stats & Action */}
         <div className="flex items-center gap-3">
           <div className="px-3.5 py-1.5 rounded-xl bg-[#10182B] border border-[#E8C77E]/20 text-xs">
             <span className="text-[#AAB2C2]">Active On Duty: </span>
-            <strong className="text-[#91C98A] font-mono">184 Officers</strong>
+            <strong className="text-[#91C98A] font-mono">{activeOnDutyCount} Officers</strong>
           </div>
           <div className="px-3.5 py-1.5 rounded-xl bg-[#10182B] border border-[#E8C77E]/20 text-xs">
             <span className="text-[#AAB2C2]">Standby Reserves: </span>
-            <strong className="text-[#E8C77E] font-mono">16 Ready</strong>
+            <strong className="text-[#E8C77E] font-mono">{standbyCount} Ready</strong>
           </div>
+          <button
+            onClick={() => setIsNewCrewModalOpen(true)}
+            className="savera-btn-gold py-1.5 px-3.5 text-xs cursor-pointer flex items-center gap-1.5"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Register Crew</span>
+          </button>
         </div>
       </div>
 
@@ -294,6 +307,31 @@ const SaveraCrewPage = () => {
               </div>
 
               <div>
+                <span className="text-[#AAB2C2] block mb-1.5 font-bold uppercase text-[10px]">
+                  Roster Duty Status Override
+                </span>
+                <div className="flex gap-2">
+                  {['On Duty', 'Standby', 'Rest Period'].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => {
+                        updateCrewDuty(selectedCrewMember.id, st);
+                        setSelectedCrewMember((prev) => (prev ? { ...prev, dutyStatus: st, availabilityStatus: st } : null));
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                        selectedCrewMember.dutyStatus === st
+                          ? 'bg-[#E8C77E] text-[#080D1B] font-bold shadow'
+                          : 'bg-[#080D1B] text-[#AAB2C2] border border-[#E8C77E]/20 hover:text-white'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <span className="text-[#AAB2C2]">Contact Telemetry:</span>
                 <p className="font-mono text-white mt-0.5 m-0">
                   {selectedCrewMember.email || `${selectedCrewMember.id.toLowerCase()}@savera.aero`} • Ext: +91 (011) 2567-8840
@@ -321,6 +359,12 @@ const SaveraCrewPage = () => {
           </div>
         </div>
       )}
+
+      {/* New Crew Registration Modal */}
+      <SaveraNewCrewModal
+        isOpen={isNewCrewModalOpen}
+        onClose={() => setIsNewCrewModalOpen(false)}
+      />
     </div>
   );
 };

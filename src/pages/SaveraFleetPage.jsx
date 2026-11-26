@@ -11,16 +11,22 @@ import {
   ChevronRight,
   Sparkles,
   ArrowRight,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 import { useSavera } from '../context/SaveraContext';
+import SaveraNewAircraftModal from '../components/SaveraNewAircraftModal';
 
 const SaveraFleetPage = () => {
-  const { fleet, showToast } = useSavera();
+  const { fleet, showToast, updateFleetStatus } = useSavera();
   const [modelFilter, setModelFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [selectedAircraft, setSelectedAircraft] = useState(null);
+  const [isNewAircraftModalOpen, setIsNewAircraftModalOpen] = useState(false);
+
+  const activeFrames = fleet.filter(a => a.status === 'Active' || a.availabilityStatus === 'Active').length;
+  const utilizationPercent = fleet.length > 0 ? Math.round((activeFrames / fleet.length) * 100) : 87.5;
 
   const filteredFleet = fleet.filter(a => {
     if (search) {
@@ -56,16 +62,23 @@ const SaveraFleetPage = () => {
           </p>
         </div>
 
-        {/* Fleet Utilization Metric */}
+        {/* Fleet Utilization Metric & Action */}
         <div className="flex items-center gap-3">
           <div className="px-3.5 py-1.5 rounded-xl bg-[#10182B] border border-[#E8C77E]/20 text-xs">
             <span className="text-[#AAB2C2]">Utilization: </span>
-            <strong className="text-[#91C98A] font-mono">87.5% Active</strong>
+            <strong className="text-[#91C98A] font-mono">{utilizationPercent}% Active</strong>
           </div>
           <div className="px-3.5 py-1.5 rounded-xl bg-[#10182B] border border-[#E8C77E]/20 text-xs">
             <span className="text-[#AAB2C2]">Fleet Frames: </span>
-            <strong className="text-[#E8C77E] font-mono">32 Aircraft</strong>
+            <strong className="text-[#E8C77E] font-mono">{fleet.length} Aircraft</strong>
           </div>
+          <button
+            onClick={() => setIsNewAircraftModalOpen(true)}
+            className="savera-btn-gold py-1.5 px-3.5 text-xs cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Aircraft</span>
+          </button>
         </div>
       </div>
 
@@ -286,6 +299,31 @@ const SaveraFleetPage = () => {
               </div>
 
               <div>
+                <span className="text-[#AAB2C2] block mb-1.5 font-bold uppercase text-[10px]">
+                  Fleet Availability Status Override
+                </span>
+                <div className="flex gap-2">
+                  {['Active', 'Standby', 'In Maintenance'].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => {
+                        updateFleetStatus(selectedAircraft.tailNumber, st);
+                        setSelectedAircraft((prev) => (prev ? { ...prev, status: st, availabilityStatus: st } : null));
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                        selectedAircraft.status === st || selectedAircraft.availabilityStatus === st
+                          ? 'bg-[#E8C77E] text-[#080D1B] font-bold shadow'
+                          : 'bg-[#080D1B] text-[#AAB2C2] border border-[#E8C77E]/20 hover:text-white'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <span className="text-[#AAB2C2]">Maintenance Status & Airworthiness:</span>
                 <p className="text-white mt-0.5 m-0">
                   {selectedAircraft.maintenanceStatus || 'A-Check Passed. All Airworthiness Directives (ADs) complied with.'}
@@ -313,6 +351,12 @@ const SaveraFleetPage = () => {
           </div>
         </div>
       )}
+
+      {/* New Aircraft Registration Modal */}
+      <SaveraNewAircraftModal
+        isOpen={isNewAircraftModalOpen}
+        onClose={() => setIsNewAircraftModalOpen(false)}
+      />
     </div>
   );
 };

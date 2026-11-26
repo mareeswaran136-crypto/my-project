@@ -354,6 +354,7 @@ class ApiClient {
 
   liveOps = {
     getRadar: () => this.request('/live-ops/radar'),
+    syncRadar: () => this.request('/live-ops/radar/sync', { method: 'POST' }),
     getAlerts: () => this.request('/live-ops/alerts'),
     getDelays: () => this.request('/live-ops/delays'),
     broadcastAdvisory: (advisory) => this.request('/live-ops/alerts/broadcast', { method: 'POST', body: advisory }),
